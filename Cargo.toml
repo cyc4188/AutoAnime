@@ -1,0 +1,13 @@
+[package]
+name = "AutoAnime"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { version = "1.39.2", features = ["macros", "rt-multi-thread", "rt"] }
+anyhow = "1.0.86"
+reqwest = "0.12.5"
+resend-rs = "0.8.1"
+rss = "2.0.8"
+serde = { version = "1.0.204", features = ["derive"] }
+serde_yaml = "0.9.34"
