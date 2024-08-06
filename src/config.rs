@@ -33,6 +33,11 @@ impl Config {
     }
 }
 
+pub fn get_config(path: &str) -> anyhow::Result<Config> {
+    let config: Config = serde_yaml::from_str(std::fs::read_to_string(path)?.as_str())?;
+    Ok(config)
+}
+
 #[cfg(test)]
 mod tests {
     use super::Config;
