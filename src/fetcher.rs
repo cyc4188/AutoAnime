@@ -1,7 +1,8 @@
 use anyhow::Result;
-use chrono::{DateTime, Local};
+use chrono::{DateTime, Days, Local};
 use reqwest::Client;
 use rss_for_mikan::Channel;
+use tracing::info;
 
 use crate::config::Config;
 
@@ -16,7 +17,7 @@ impl Fetcher {
         Self {
             config,
             request_client: Client::new(),
-            last_update_time: Local::now(),
+            last_update_time: Local::now().checked_sub_days(Days::new(1)).unwrap(),
         }
     }
 
@@ -31,7 +32,32 @@ impl Fetcher {
                 .await?
                 .bytes()
                 .await?;
-            let channel = Channel::read_from(&content[..])?;
+            info!("Get Channel");
+            let mut channel = Channel::read_from(&content[..])?;
+            // filter channel
+            if let Some(pub_date) = channel.pub_date() {
+                let mut pub_date = pub_date.to_string();
+                pub_date.push_str("+08:00");
+                let pub_date = DateTime::parse_from_rfc3339(pub_date.as_str())
+                    .unwrap()
+                    .with_timezone(&Local {});
+                if pub_date < self.last_update_time {
+                    continue;
+                }
+            }
+
+            // filter items
+            channel.items.retain(|item| {
+                if let Some(pub_date) = item.pub_date() {
+                    let mut pub_date = pub_date.to_string();
+                    pub_date.push_str("+08:00");
+                    let pub_date = DateTime::parse_from_rfc3339(pub_date.as_str())
+                        .unwrap()
+                        .with_timezone(&Local {});
+                    return pub_date > self.last_update_time;
+                }
+                true
+            });
 
             for subscriber in &feed.subscriber {
                 subscriber.notify(&self.config, &channel).await?;

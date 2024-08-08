@@ -30,7 +30,7 @@ impl Subscriber {
                 // TODO: more specific
                 let email = CreateEmailBaseOptions::new(from, to, subject)
                     .with_text(channel.link())
-                    .with_html(channel.description());
+                    .with_html(channel2html(channel).as_str());
                 resend_client.emails.send(email).await?;
             }
             Subscriber::PikPak => {
@@ -39,4 +39,25 @@ impl Subscriber {
         }
         Ok(())
     }
+}
+
+fn channel2html(channel: &Channel) -> String {
+    let mut html = String::new();
+    html.push_str(format!("<p><b>{}</b><p>\n", channel.description()).as_str());
+    html.push_str("<ul>\n");
+    for item in channel.items() {
+        html.push_str(
+            format!(
+                "<li>{} - {}</li>",
+                item.description().unwrap_or(""),
+                item.torrent
+                    .as_ref()
+                    .map(|torrent| torrent.link.as_deref().unwrap_or(""))
+                    .unwrap_or("")
+            )
+            .as_str(),
+        );
+    }
+    html.push_str("</ul>\n");
+    html
 }
