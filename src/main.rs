@@ -1,6 +1,9 @@
 use std::sync::Arc;
 
-use config::{get_config, Config};
+use auto_anime::{
+    config::{get_config, Config},
+    AutoAnime,
+};
 use delay_timer::{
     entity::DelayTimerBuilder,
     error::TaskError,
@@ -10,24 +13,19 @@ use tokio::sync::Mutex;
 use tracing::{info, Level};
 use tracing_subscriber::FmtSubscriber;
 
-mod config;
-mod feeds;
-mod fetcher;
-mod subscriber;
-
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
     log_init();
 
     let path = "./config.yaml";
-    let config = get_config(path)?;
+    let config = Arc::new(get_config(path)?);
     info!("[Config] get config");
 
     let delay_timer = DelayTimerBuilder::default()
         .tokio_runtime_by_default()
         .build();
 
-    delay_timer.add_task(fetch_task(config)?)?;
+    delay_timer.add_task(fetch_task(config).await?)?;
     info!("[Task] add task");
 
     loop {
@@ -37,15 +35,24 @@ async fn main() -> anyhow::Result<()> {
     Ok(())
 }
 
-fn fetch_task(config: Config) -> anyhow::Result<Task, TaskError> {
+async fn fetch_task(config: Arc<Config>) -> anyhow::Result<Task, TaskError> {
     let mut task_builder = TaskBuilder::default();
-    let fetcher = Arc::new(Mutex::new(fetcher::Fetcher::new(config)));
+    let auto_anime = Arc::new(Mutex::new(
+        AutoAnime::new(config).expect("[AutoAnime] Create Failed"),
+    ));
+
+    {
+        if let Err(e) = auto_anime.lock().await.run().await {
+            info!("[Task] Run Error: {}", e);
+        }
+        info!("[Task] Fetch Done");
+    }
 
     let body = move || {
-        let fetcher = fetcher.clone();
+        let auto_anime = auto_anime.clone();
         async move {
-            if let Err(e) = fetcher.lock().await.fetch().await {
-                info!("[Task] Fetch Error: {}", e);
+            if let Err(e) = auto_anime.lock().await.run().await {
+                info!("[Task] Run Error: {}", e);
             }
             info!("[Task] Fetch Done");
         }
@@ -59,7 +66,7 @@ fn fetch_task(config: Config) -> anyhow::Result<Task, TaskError> {
 
 fn log_init() {
     let subscriber = FmtSubscriber::builder()
-        .with_max_level(Level::DEBUG)
+        .with_max_level(Level::INFO)
         .finish();
     tracing::subscriber::set_global_default(subscriber).expect("setting default subscriber failed");
 }

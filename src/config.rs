@@ -12,13 +12,15 @@ pub struct Config {
     feeds: Vec<Feed>,
     // pikpak
     pikpak: Option<PikpakConfig>,
+    // proxy
+    proxy: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PikpakConfig {
-    username: String,
-    password: String,
-    path: String,
+    pub username: String,
+    pub password: String,
+    pub path: String,
 }
 
 impl Config {
@@ -31,8 +33,13 @@ impl Config {
     pub fn send_email(&self) -> &str {
         &self.send_email
     }
+    pub fn proxy(&self) -> Option<&str> {
+        self.proxy.as_deref()
+    }
+    pub fn pikpak_config(&self) -> Option<&PikpakConfig> {
+        self.pikpak.as_ref()
+    }
 }
-
 pub fn get_config(path: &str) -> anyhow::Result<Config> {
     let config: Config = serde_yaml::from_str(std::fs::read_to_string(path)?.as_str())?;
     Ok(config)
