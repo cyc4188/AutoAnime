@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use pikpak_api::pikpak::{self, ClientOptions};
 use resend_rs::{types::CreateEmailBaseOptions, Resend};
 use rss_for_mikan::Channel;
@@ -42,8 +42,12 @@ impl Distributor {
             retry_times: 3,
             proxy,
         };
-        let mut pikpak_client = pikpak::Client::new(options)?;
-        pikpak_client.login().await?;
+        let mut pikpak_client =
+            pikpak::Client::new(options).context("[init pikpak] create client failed")?;
+        pikpak_client
+            .login()
+            .await
+            .context("[init pikpak] login failed")?;
         self.pikpak_client = Some(Arc::new(Mutex::new(pikpak_client)));
 
         Ok(())
@@ -52,66 +56,61 @@ impl Distributor {
     pub async fn notify(&mut self, channel: &Channel, sub: &Subscriber) -> anyhow::Result<()> {
         match sub {
             Subscriber::Email(email_url) => {
-                let from = self.config.send_email();
-                let to = vec![email_url.as_str()];
-                let subject = format!("{} - {}", "AutoAnime", channel.title);
-                // TODO: more specific
-                let email = CreateEmailBaseOptions::new(from, to, subject)
-                    .with_text(channel.link())
-                    .with_html(channel2html(channel).as_str());
-                self.resend_client.emails.send(email).await?;
+                self.send_email(email_url.as_str(), channel).await?;
             }
             Subscriber::PikPak => {
-                // init pikpak client
-                if self.pikpak_client.is_none() {
-                    info!("[Distributor] init pikpak client");
+                self.magnet_pikpak(channel).await?;
+            }
+        }
+        Ok(())
+    }
 
-                    let pikpak_config = self
-                        .config
-                        .pikpak_config()
-                        .ok_or(anyhow!("pikpak config not found"))?;
-                    let proxy = self.config.proxy().map(|s| s.to_string());
-                    let options = ClientOptions {
-                        username: pikpak_config.username.clone(),
-                        password: pikpak_config.password.clone(),
-                        retry_times: 3,
-                        proxy,
-                    };
-                    let mut pikpak_client = pikpak::Client::new(options)?;
-                    pikpak_client.login().await?;
-                    self.pikpak_client = Some(Arc::new(Mutex::new(pikpak_client)));
-                }
-                // upload torrent on pikpak
-                if let Some(client) = self.pikpak_client.as_ref() {
-                    let stream = stream::iter(channel.items.clone());
-                    let config = self.config.clone();
-                    let fut = stream.for_each_concurrent(None, |item| {
-                        let value = client.clone();
-                        let config = config.clone();
-                        async move {
-                            if item.torrent.is_some() {
-                                // torrent is in enclosure.url
-                                if let Some(enclosure) = item.enclosure().as_ref() {
-                                    let torrent_url = enclosure.url().to_owned();
-                                    info!("torrent: {}", torrent_url);
-                                    if let Err(e) = value
-                                        .lock()
-                                        .await
-                                        .new_magnet(
-                                            config.pikpak_config().unwrap().path.as_str(),
-                                            &torrent_url,
-                                        )
-                                        .await
-                                    {
-                                        tracing::error!("{}", e);
-                                    }
-                                }
+    async fn send_email(&self, email_url: &str, channel: &Channel) -> anyhow::Result<()> {
+        let from = self.config.send_email();
+        let to = vec![email_url];
+        let subject = format!("{} - {}", "AutoAnime", channel.title);
+        // TODO: more specific
+        let email = CreateEmailBaseOptions::new(from, to, subject)
+            .with_text(channel.link())
+            .with_html(channel2html(channel).as_str());
+        self.resend_client.emails.send(email).await?;
+        Ok(())
+    }
+
+    async fn magnet_pikpak(&mut self, channel: &Channel) -> anyhow::Result<()> {
+        // init pikpak client
+        if self.pikpak_client.is_none() {
+            self.init_pikpak_client().await?;
+        }
+        // upload torrent on pikpak
+        if let Some(client) = self.pikpak_client.as_ref() {
+            let stream = stream::iter(channel.items.clone());
+            let config = self.config.clone();
+            let fut = stream.for_each_concurrent(None, |item| {
+                let value = client.clone();
+                let config = config.clone();
+                async move {
+                    if item.torrent.is_some() {
+                        // torrent is in enclosure.url
+                        if let Some(enclosure) = item.enclosure().as_ref() {
+                            let torrent_url = enclosure.url().to_owned();
+                            info!("torrent: {}", torrent_url);
+                            if let Err(e) = value
+                                .lock()
+                                .await
+                                .new_magnet(
+                                    config.pikpak_config().unwrap().path.as_str(),
+                                    &torrent_url,
+                                )
+                                .await
+                            {
+                                tracing::error!("{}", e);
                             }
                         }
-                    });
-                    fut.await;
+                    }
                 }
-            }
+            });
+            fut.await;
         }
         Ok(())
     }
