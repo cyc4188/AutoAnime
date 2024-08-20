@@ -14,7 +14,7 @@ mod subscriber;
 pub struct AutoAnime {
     fetcher: Fetcher,
     pub distubtor: Distributor,
-    config: Arc<Config>,
+    _config: Arc<Config>,
 }
 
 impl AutoAnime {
@@ -24,7 +24,7 @@ impl AutoAnime {
         Ok(Self {
             fetcher,
             distubtor,
-            config,
+            _config: config,
         })
     }
     pub async fn run(&mut self) -> anyhow::Result<()> {

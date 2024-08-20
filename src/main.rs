@@ -31,8 +31,6 @@ async fn main() -> anyhow::Result<()> {
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(30)).await;
     }
-
-    Ok(())
 }
 
 async fn fetch_task(config: Arc<Config>) -> anyhow::Result<Task, TaskError> {

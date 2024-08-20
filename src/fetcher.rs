@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Duration};
 
 use anyhow::Result;
 use chrono::{DateTime, Days, Local};
-use reqwest::{Client, ClientBuilder, Proxy};
+use reqwest::{Client, Proxy};
 use rss_for_mikan::Channel;
 use tracing::{debug, info};
 
