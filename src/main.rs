@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use auto_anime::{
-    config::{get_config, Config},
+    config::{get_config, Config, FrequencyConfig},
     AutoAnime,
 };
 use delay_timer::{
@@ -36,7 +36,7 @@ async fn main() -> anyhow::Result<()> {
 async fn fetch_task(config: Arc<Config>) -> anyhow::Result<Task, TaskError> {
     let mut task_builder = TaskBuilder::default();
     let auto_anime = Arc::new(Mutex::new(
-        AutoAnime::new(config).expect("[AutoAnime] Create Failed"),
+        AutoAnime::new(config.clone()).expect("[AutoAnime] Create Failed"),
     ));
 
     {
@@ -56,10 +56,25 @@ async fn fetch_task(config: Arc<Config>) -> anyhow::Result<Task, TaskError> {
         }
     };
 
-    task_builder
-        .set_task_id(1)
-        .set_frequency_repeated_by_hours(6)
-        .spawn_async_routine(body)
+    let mut task_builder = task_builder.set_task_id(1);
+
+    if let Some(frequency) = config.frequency() {
+        match frequency {
+            FrequencyConfig::Minutely(interval) => {
+                task_builder = task_builder.set_frequency_repeated_by_minutes(*interval);
+            }
+            FrequencyConfig::Hourly(interval) => {
+                task_builder = task_builder.set_frequency_repeated_by_hours(*interval);
+            }
+            FrequencyConfig::Daily(interval) => {
+                task_builder = task_builder.set_frequency_repeated_by_days(*interval);
+            }
+        }
+    } else {
+        task_builder = task_builder.set_frequency_repeated_by_hours(1);
+    }
+
+    task_builder.spawn_async_routine(body)
 }
 
 fn log_init() {

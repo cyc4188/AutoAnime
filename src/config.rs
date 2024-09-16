@@ -14,7 +14,20 @@ pub struct Config {
     pikpak: Option<PikpakConfig>,
     // proxy
     proxy: Option<String>,
+    // time config
+    frequency: Option<FrequencyConfig>,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub enum FrequencyConfig {
+    #[serde(rename = "minutely")]
+    Minutely(u64),
+    #[serde(rename = "hourly")]
+    Hourly(u64),
+    #[serde(rename = "daily")]
+    Daily(u64),
+}
+
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PikpakConfig {
@@ -39,6 +52,9 @@ impl Config {
     pub fn pikpak_config(&self) -> Option<&PikpakConfig> {
         self.pikpak.as_ref()
     }
+    pub fn frequency(&self) -> Option<&FrequencyConfig> {
+        self.frequency.as_ref()
+    }
 }
 pub fn get_config(path: &str) -> anyhow::Result<Config> {
     let config: Config = serde_yaml::from_str(std::fs::read_to_string(path)?.as_str())?;
@@ -57,10 +73,12 @@ mod tests {
         feeds:
         - url: http://example.com
           subscriber:
-            - !Email test@receiver.cc
+            - !email test@receiver.cc
         - url: http://example2.com
           subscriber:
-            - !PikPak
+            - !pikpak
+        frequency:
+            !minutely 1
         ";
         let config: Config = serde_yaml::from_str(yaml).unwrap();
         assert!(config.resend_api_key == "key_123");
