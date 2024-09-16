@@ -26,7 +26,7 @@ async fn main() -> anyhow::Result<()> {
         .build();
 
     delay_timer.add_task(fetch_task(config).await?)?;
-    info!("[Task] add task");
+    info!("[Timer Task] add task");
 
     loop {
         tokio::time::sleep(std::time::Duration::from_secs(30)).await;
@@ -41,18 +41,18 @@ async fn fetch_task(config: Arc<Config>) -> anyhow::Result<Task, TaskError> {
 
     {
         if let Err(e) = auto_anime.lock().await.run().await {
-            info!("[Task] Run Error: {}", e);
+            info!("[Timer Task] Run Error: {}", e);
         }
-        info!("[Task] Fetch Done");
+        info!("[Timer Task] Fetch Done");
     }
 
     let body = move || {
         let auto_anime = auto_anime.clone();
         async move {
             if let Err(e) = auto_anime.lock().await.run().await {
-                info!("[Task] Run Error: {}", e);
+                info!("[Timer Task] Run Error: {}", e);
             }
-            info!("[Task] Fetch Done");
+            info!("[Timer Task] Fetch Done");
         }
     };
 

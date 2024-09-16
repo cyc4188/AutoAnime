@@ -13,7 +13,7 @@ mod subscriber;
 
 pub struct AutoAnime {
     fetcher: Fetcher,
-    pub distubtor: Distributor,
+    distubtor: Distributor,
     _config: Arc<Config>,
 }
 
