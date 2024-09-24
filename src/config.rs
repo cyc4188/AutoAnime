@@ -62,7 +62,7 @@ impl Config {
         self.frequency.as_ref()
     }
     pub fn history_path(&self) -> Option<&Path> {
-        self.history_path.as_ref().map(|path| path.as_path())
+        self.history_path.as_deref()
     }
 }
 pub fn get_config(path: &str) -> anyhow::Result<Config> {
