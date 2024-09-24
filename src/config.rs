@@ -1,6 +1,11 @@
+use std::path::{Path, PathBuf};
+
 use serde::{Deserialize, Serialize};
 
-use crate::feeds::Feed;
+use crate::subscriber::Subscriber;
+
+pub const CONFIG_PATH: &str = "./config.yaml";
+pub const DEFAULT_HISTORY_PATH: &str = "./history.sled";
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -8,14 +13,16 @@ pub struct Config {
     resend_api_key: String,
     // send email
     send_email: String,
-    // feeds
-    feeds: Vec<Feed>,
+    // subscriber
+    subscriber: Vec<Subscriber>,
     // pikpak
     pikpak: Option<PikpakConfig>,
     // proxy
     proxy: Option<String>,
     // time config
     frequency: Option<FrequencyConfig>,
+    // history path
+    history_path: Option<PathBuf>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,7 +35,6 @@ pub enum FrequencyConfig {
     Daily(u64),
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PikpakConfig {
     pub username: String,
@@ -37,8 +43,8 @@ pub struct PikpakConfig {
 }
 
 impl Config {
-    pub fn feeds(&self) -> &Vec<Feed> {
-        &self.feeds
+    pub fn subscriber(&self) -> &Vec<Subscriber> {
+        &self.subscriber
     }
     pub fn resend_api_key(&self) -> &str {
         &self.resend_api_key
@@ -55,6 +61,9 @@ impl Config {
     pub fn frequency(&self) -> Option<&FrequencyConfig> {
         self.frequency.as_ref()
     }
+    pub fn history_path(&self) -> Option<&Path> {
+        self.history_path.as_deref()
+    }
 }
 pub fn get_config(path: &str) -> anyhow::Result<Config> {
     let config: Config = serde_yaml::from_str(std::fs::read_to_string(path)?.as_str())?;
@@ -70,19 +79,17 @@ mod tests {
         let yaml = "
         resend_api_key: key_123
         send_email: test@test.cc
-        feeds:
-        - url: http://example.com
-          subscriber:
-            - !email test@receiver.cc
-        - url: http://example2.com
-          subscriber:
-            - !pikpak
+        subscriber:
+        - src: !email 1065768794@qq.com
+          feeds:
+          - url: http://example2.com
+          - url: http://example2.com
         frequency:
             !minutely 1
         ";
         let config: Config = serde_yaml::from_str(yaml).unwrap();
         assert!(config.resend_api_key == "key_123");
         assert!(config.send_email == "test@test.cc");
-        assert!(config.feeds.len() == 2);
+        assert!(config.subscriber.len() == 1);
     }
 }

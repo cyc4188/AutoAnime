@@ -30,13 +30,11 @@ impl AutoAnime {
     pub async fn run(&mut self) -> anyhow::Result<()> {
         // TODO: make it concurrent
         let vec = self.fetcher.fetch().await?;
-        for (channel, feed) in vec {
-            for sub in &feed.subscriber {
-                match self.distubtor.notify(&channel, sub).await {
-                    Ok(_) => {}
-                    Err(e) => {
-                        error!("{}", e);
-                    }
+        for (channel, subscriber) in vec {
+            match self.distubtor.notify(&channel, &subscriber).await {
+                Ok(_) => {}
+                Err(e) => {
+                    error!("{}", e);
                 }
             }
         }

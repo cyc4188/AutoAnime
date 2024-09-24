@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use auto_anime::{
-    config::{get_config, Config, FrequencyConfig},
+    config::{get_config, Config, FrequencyConfig, CONFIG_PATH},
     AutoAnime,
 };
 use delay_timer::{
@@ -17,8 +17,7 @@ use tracing_subscriber::FmtSubscriber;
 async fn main() -> anyhow::Result<()> {
     log_init();
 
-    let path = "./config.yaml";
-    let config = Arc::new(get_config(path)?);
+    let config = Arc::new(get_config(CONFIG_PATH)?);
     info!("[Config] get config");
 
     let delay_timer = DelayTimerBuilder::default()
