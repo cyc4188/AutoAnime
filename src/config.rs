@@ -80,7 +80,7 @@ mod tests {
         resend_api_key: key_123
         send_email: test@test.cc
         subscriber:
-        - src: !email 1065768794@qq.com
+        - src: !email example@qq.com
           feeds:
           - url: http://example2.com
           - url: http://example2.com
