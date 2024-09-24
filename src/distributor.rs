@@ -9,7 +9,7 @@ use futures::stream::{self, StreamExt};
 use tokio::sync::Mutex;
 use tracing::info;
 
-use crate::{config::Config, subscriber::Subscriber};
+use crate::{config::Config, subscriber::SubscriberSrc};
 
 pub struct Distributor {
     config: Arc<Config>,
@@ -53,12 +53,12 @@ impl Distributor {
         Ok(())
     }
 
-    pub async fn notify(&mut self, channel: &Channel, sub: &Subscriber) -> anyhow::Result<()> {
+    pub async fn notify(&mut self, channel: &Channel, sub: &SubscriberSrc) -> anyhow::Result<()> {
         match sub {
-            Subscriber::Email(email_url) => {
+            SubscriberSrc::Email(email_url) => {
                 self.send_email(email_url.as_str(), channel).await?;
             }
-            Subscriber::PikPak => {
+            SubscriberSrc::PikPak => {
                 self.magnet_pikpak(channel).await?;
             }
         }
