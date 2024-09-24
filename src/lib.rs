@@ -34,7 +34,7 @@ impl AutoAnime {
             match self.distubtor.notify(&channel, &subscriber).await {
                 Ok(_) => {}
                 Err(e) => {
-                        error!("{}", e);
+                    error!("{}", e);
                 }
             }
         }

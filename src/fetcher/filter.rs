@@ -1,4 +1,3 @@
-
 use std::path::Path;
 
 use chrono::{DateTime, Local};
@@ -16,7 +15,11 @@ pub struct Key {
 
 impl Key {
     pub fn new(title: String, guid: Guid, subscriber: SubscriberSrc) -> Self {
-        Self {title, guid, subscriber }
+        Self {
+            title,
+            guid,
+            subscriber,
+        }
     }
 }
 
@@ -62,6 +65,4 @@ impl KVStore {
         self.inner.insert(key, value)?;
         Ok(())
     }
-    
-    
 }

@@ -35,7 +35,6 @@ pub enum FrequencyConfig {
     Daily(u64),
 }
 
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct PikpakConfig {
     pub username: String,

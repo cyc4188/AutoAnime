@@ -94,10 +94,7 @@ impl Distributor {
                         // torrent is in enclosure.url
                         if let Some(enclosure) = item.enclosure().as_ref() {
                             let torrent_url = enclosure.url().to_owned();
-                            info!(
-                                "[Pikpak] download anime: {}",
-                                item.title().unwrap_or("")
-                            );
+                            info!("[Pikpak] download anime: {}", item.title().unwrap_or(""));
                             info!("[Pikpak] torrent: {}", torrent_url);
                             if let Err(e) = value
                                 .lock()
