@@ -1,0 +1,24 @@
+resend_api_key: <Your_API_KEY>
+send_email: <Your_Send_Email>
+
+subscriber:
+- src: !email <Receiver_Email> 
+  feeds:
+  - url: <Feed_URL1>
+  - url: <Feed_URL2>
+
+- src: !pikpak
+  feeds:
+  - url: <Feed_URL3>
+  - url: <Feed_URL4>
+
+proxy: http://127.0.0.1:7897 
+
+pikpak:
+  username: <Your_Pikpak_Username>
+  password: <Your_Pikpak_Password>
+  path: <Download_Folder_Path>
+
+# every 1 hour
+frequency:
+  !hourly 1
