@@ -82,7 +82,6 @@ mod tests {
         subscriber:
         - src: !email 1065768794@qq.com
           feeds:
-          - url: https://mikanani.me/RSS/MyBangumi?token=Dfu11vL3E3WpYsJvpzeTBK8mFOh2UkK/Pi0HwCBPxeI%3D
           - url: http://example2.com
           - url: http://example2.com
         frequency:
