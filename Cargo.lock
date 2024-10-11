@@ -307,7 +307,7 @@ checksum = "1505bd5d3d116872e7271a6d4e16d81d0c8570876c8de68093a09ac269d8aac0"
 
 [[package]]
 name = "auto_anime"
-version = "0.1.0"
+version = "0.1.1"
 dependencies = [
  "anyhow",
  "bincode",
@@ -1647,7 +1647,7 @@ checksum = "e3148f5046208a5d56bcfc03053e3ca6334e51da8dfb19b6cdc8b306fae3283e"
 [[package]]
 name = "pikpak-api"
 version = "0.1.1"
-source = "git+https://github.com/cyc4188/pikpak-api.git#680a7b33f6b394fe372bf5e2946b264221e963d8"
+source = "git+https://github.com/cyc4188/pikpak-api.git?tag=v0.1.1#680a7b33f6b394fe372bf5e2946b264221e963d8"
 dependencies = [
  "anyhow",
  "async-recursion",
