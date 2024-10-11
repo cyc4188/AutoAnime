@@ -1,11 +1,15 @@
 use std::sync::Arc;
 
 use anyhow::{anyhow, Context};
+use crossbeam_queue::ArrayQueue;
 use pikpak_api::pikpak::{self, ClientOptions};
 use resend_rs::{types::CreateEmailBaseOptions, Resend};
-use rss_for_mikan::Channel;
+use rss_for_mikan::{Channel, Item};
 
-use futures::stream::{self, StreamExt};
+use futures::{
+    future::ok,
+    stream::{self, StreamExt},
+};
 use tokio::sync::Mutex;
 use tracing::info;
 
@@ -53,19 +57,18 @@ impl Distributor {
         Ok(())
     }
 
-    pub async fn notify(&mut self, channel: &Channel, sub: &SubscriberSrc) -> anyhow::Result<()> {
+    pub async fn notify(
+        &mut self,
+        channel: &Channel,
+        sub: &SubscriberSrc,
+    ) -> anyhow::Result<Vec<Item>> {
         match sub {
-            SubscriberSrc::Email(email_url) => {
-                self.send_email(email_url.as_str(), channel).await?;
-            }
-            SubscriberSrc::PikPak => {
-                self.magnet_pikpak(channel).await?;
-            }
+            SubscriberSrc::Email(email_url) => self.send_email(email_url.as_str(), channel).await,
+            SubscriberSrc::PikPak => self.magnet_pikpak(channel).await,
         }
-        Ok(())
     }
 
-    async fn send_email(&self, email_url: &str, channel: &Channel) -> anyhow::Result<()> {
+    async fn send_email(&self, email_url: &str, channel: &Channel) -> anyhow::Result<Vec<Item>> {
         let from = self.config.send_email();
         let to = vec![email_url];
         let subject = format!("{} - {}", "AutoAnime", channel.title);
@@ -74,10 +77,10 @@ impl Distributor {
             .with_text(channel.link())
             .with_html(channel2html(channel).as_str());
         self.resend_client.emails.send(email).await?;
-        Ok(())
+        Ok(Vec::new())
     }
 
-    async fn magnet_pikpak(&mut self, channel: &Channel) -> anyhow::Result<()> {
+    async fn magnet_pikpak(&mut self, channel: &Channel) -> anyhow::Result<Vec<Item>> {
         // init pikpak client
         if self.pikpak_client.is_none() {
             self.init_pikpak_client().await?;
@@ -86,17 +89,24 @@ impl Distributor {
         if let Some(client) = self.pikpak_client.as_ref() {
             let stream = stream::iter(channel.items.clone());
             let config = self.config.clone();
+            let queue: Arc<ArrayQueue<Item>> = Arc::new(ArrayQueue::new(channel.items.len()));
+
             let fut = stream.for_each_concurrent(None, |item| {
-                let value = client.clone();
+                let client = client.clone();
                 let config = config.clone();
+                let queue = queue.clone();
                 async move {
                     if item.torrent.is_some() {
                         // torrent is in enclosure.url
                         if let Some(enclosure) = item.enclosure().as_ref() {
                             let torrent_url = enclosure.url().to_owned();
-                            info!("[Pikpak] download anime: {}", item.title().unwrap_or(""));
+                            info!(
+                                "[Pikpak] downloading anime: {}",
+                                item.title().unwrap_or_default()
+                            );
                             info!("[Pikpak] torrent: {}", torrent_url);
-                            if let Err(e) = value
+
+                            if let Err(e) = client
                                 .lock()
                                 .await
                                 .new_magnet(
@@ -105,15 +115,26 @@ impl Distributor {
                                 )
                                 .await
                             {
-                                tracing::error!("{}", e);
+                                tracing::error!(
+                                    "Pikpak Download Error: anime: {}, error: {}",
+                                    item.title().unwrap_or_default(),
+                                    e
+                                );
+                                queue.push(item).ok();
                             }
                         }
                     }
                 }
             });
             fut.await;
+            let mut items_vec = Vec::new();
+            while let Some(item) = queue.pop() {
+                items_vec.push(item);
+            }
+            Ok(items_vec)
+        } else {
+            Err(anyhow!("pikpak client not started"))
         }
-        Ok(())
     }
 }
 
