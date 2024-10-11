@@ -5,7 +5,7 @@ use std::{path::Path, sync::Arc, time::Duration};
 use anyhow::Result;
 use chrono::{DateTime, Local};
 use reqwest::{Client, Proxy};
-use rss_for_mikan::Channel;
+use rss_for_mikan::{Channel, Item};
 use tracing::{debug, error, info};
 
 use crate::{
@@ -93,6 +93,13 @@ impl Fetcher {
             }
         }
         Ok(vec)
+    }
+
+    pub async fn remove_from_history(&mut self, items: Vec<Item>, subscriber: &SubscriberSrc) -> Result<()> {
+        for item in items {
+            self.fetch_history.remove(&Key::from_item(&item, subscriber))?;
+        }
+        Ok(())
     }
 }
 

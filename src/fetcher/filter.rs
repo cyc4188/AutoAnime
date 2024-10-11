@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use chrono::{DateTime, Local};
-use rss_for_mikan::Guid;
+use rss_for_mikan::{Guid, Item};
 use serde::{Deserialize, Serialize};
 
 use crate::subscriber::SubscriberSrc;
@@ -21,7 +21,16 @@ impl Key {
             subscriber,
         }
     }
+
+    pub fn from_item(item: &Item, subscriber: &SubscriberSrc) -> Self {
+        Self::new(
+            item.title().unwrap_or_default().to_string(),
+            item.guid.clone().unwrap_or_default(),
+            subscriber.clone(),
+        )
+    }
 }
+
 
 type Value = DateTime<Local>;
 
@@ -63,6 +72,12 @@ impl KVStore {
         let key = bincode::serialize(&key)?;
         let value = bincode::serialize(&value)?;
         self.inner.insert(key, value)?;
+        Ok(())
+    }
+
+    pub fn remove(&self, key: &Key) -> anyhow::Result<()> {
+        let key = bincode::serialize(&key)?;
+        self.inner.remove(key)?;
         Ok(())
     }
 }

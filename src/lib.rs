@@ -32,8 +32,11 @@ impl AutoAnime {
         let vec = self.fetcher.fetch().await?;
         for (channel, subscriber) in vec {
             match self.distubtor.notify(&channel, &subscriber).await {
-                Ok(_) => {}
+                Ok(items) => {
+                    self.fetcher.remove_from_history(items, &subscriber).await?;
+                }
                 Err(e) => {
+                    self.fetcher.remove_from_history(channel.items, &subscriber).await?;
                     error!("{}", e);
                 }
             }
